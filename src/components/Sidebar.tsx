@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Users, FileBadge, HelpCircle, FileCheck, BarChart4, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Users, FileBadge, FileCheck, BarChart4, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SidebarItem = {
@@ -31,18 +31,13 @@ const Sidebar: React.FC = () => {
       path: '/commercial',
     },
     {
-      icon: <HelpCircle size={20} />,
-      label: 'Preguntas',
-      path: '/faq',
-    },
-    {
       icon: <FileCheck size={20} />,
       label: 'Contratación',
       path: '/contracting',
     },
     {
       icon: <BarChart4 size={20} />,
-      label: 'Dashboard',
+      label: 'Resultados',
       path: '/dashboard',
     },
   ];
