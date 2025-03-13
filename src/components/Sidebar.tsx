@@ -61,33 +61,46 @@ const Sidebar: React.FC = () => {
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="text-sidebar-foreground/80 hover:text-sidebar-foreground p-1.5 rounded-md hover:bg-sidebar-accent transition-colors"
+          aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
 
-      <div className="flex-1 py-4 overflow-y-auto">
+      <div className="flex-1 py-4 overflow-y-auto scrollbar-hide">
         <nav className="px-2 space-y-1">
-          {items.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'sidebar-item',
-                location.pathname === item.path && 'active',
-                collapsed && 'justify-center px-0'
-              )}
-            >
-              {item.icon}
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          ))}
+          {items.map((item) => {
+            const isActive = location.pathname === item.path || 
+                            (item.path === '/' && location.pathname === '/index');
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex items-center py-2.5 px-3 rounded-md transition-colors group",
+                  isActive 
+                    ? "bg-primary text-white" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                  collapsed && "justify-center px-0"
+                )}
+              >
+                <div className={cn(
+                  "flex items-center justify-center", 
+                  collapsed ? "w-full" : "w-8"
+                )}>
+                  {item.icon}
+                </div>
+                {!collapsed && <span className="ml-2">{item.label}</span>}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-sidebar-primary-foreground">
+          <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
             AG
           </div>
           {!collapsed && (
