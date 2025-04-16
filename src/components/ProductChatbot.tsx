@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Card, 
@@ -36,8 +35,8 @@ export const ProductChatbot = () => {
   const { toast } = useToast();
   const { sessionId } = useSessionId();
   
-  // N8n webhook URL
-  const webhookUrl = "https://prueba-rd-n8.app.n8n.cloud/webhook-test/flujo-callcenter";
+  // Updated webhook URL
+  const webhookUrl = "https://prueba-rd-n8.app.n8n.cloud/webhook/flujo-callcenter";
 
   // Handle sending messages to n8n webhook
   const sendMessageToWebhook = async (message: string) => {
