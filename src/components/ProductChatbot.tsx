@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Card, 
@@ -10,10 +9,9 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Bot, Send, RefreshCw, Loader2, MessageSquare, X } from 'lucide-react';
+import { Bot, Send, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { v4 as uuidv4 } from 'uuid';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useSessionId } from "@/hooks/useSessionId";
 
 interface Message {
   id: string;
@@ -23,74 +21,99 @@ interface Message {
 }
 
 export const ProductChatbot = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      content: 'Hola, soy tu asistente virtual. ¿En qué puedo ayudarte con información de productos?',
+      sender: 'bot',
+      timestamp: new Date(),
+    },
+  ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [chatSessionId, setChatSessionId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { sessionId } = useSessionId();
   
   // Updated webhook URL
   const webhookUrl = "https://prueba-rd-n8.app.n8n.cloud/webhook/flujo-callcenter";
-  
-  const welcomeMessage: Message = {
-    id: '1',
-    content: 'Hola, soy tu asistente virtual. ¿En qué puedo ayudarte con información de productos?',
-    sender: 'bot',
-    timestamp: new Date(),
-  };
 
-  // Initialize chat session ID on component mount
-  useEffect(() => {
-    const storedSessionId = localStorage.getItem('chat_session_id');
-    if (storedSessionId) {
-      setChatSessionId(storedSessionId);
-    } else {
-      const newSessionId = uuidv4();
-      localStorage.setItem('chat_session_id', newSessionId);
-      setChatSessionId(newSessionId);
-    }
-  }, []);
-
-  // Auto scroll to the most recent message
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Toggle chat visibility
-  const toggleChat = () => {
-    setIsOpen(prevIsOpen => {
-      const newIsOpen = !prevIsOpen;
+  // Handle sending messages to n8n webhook
+  const sendMessageToWebhook = async (message: string) => {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          timestamp: new Date().toISOString(),
+          source: 'chatbot',
+          sessionId: sessionId
+        }),
+      });
       
-      // Add welcome message if opening chat and no messages exist
-      if (newIsOpen && messages.length === 0) {
-        setMessages([welcomeMessage]);
+      if (!response.ok) {
+        console.error('Webhook error:', response.status);
+        return null;
       }
       
-      return newIsOpen;
-    });
-  };
-
-  // Handle input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
-
-  // Handle key press (Enter to send)
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSend();
+      const responseData = await response.json();
+      return responseData.response || null;
+    } catch (error) {
+      console.error('Error sending message to webhook:', error);
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar con el asistente. Inténtalo de nuevo más tarde.",
+        variant: "destructive"
+      });
+      return null;
     }
   };
 
-  // Handle sending messages to webhook
-  const handleSend = async () => {
+  // Mock response generator as fallback
+  const generateResponse = (query: string): string => {
+    // This is a mock response generator - in a real app, you would call an AI API
+    const responses = [
+      "Las tarjetas de crédito Platinum ofrecen acceso a salas VIP en aeropuertos internacionales y seguro de viaje gratuito.",
+      "Nuestros préstamos personales tienen una tasa desde 6.95% TIN y plazos de hasta 8 años.",
+      "El seguro de vida cubre fallecimiento, invalidez y ofrece indemnización por enfermedades graves.",
+      "Las cuentas de ahorro tienen una rentabilidad del 3% TAE el primer año, sin comisiones de mantenimiento.",
+      "Al contratar una tarjeta con un préstamo, el cliente obtiene una reducción de 0.25% en la tasa de interés del préstamo.",
+      "Sí, todas nuestras tarjetas de crédito permiten aplazar pagos. Las condiciones dependen del tipo de tarjeta.",
+      "Los requisitos principales para un préstamo son: ingresos demostrables, historial crediticio favorable y ser mayor de edad.",
+      "El seguro de hogar cubre daños estructurales, robo, incendios y responsabilidad civil, con asistencia 24/7.",
+    ];
+    
+    // Simple keyword matching for demonstration purposes
+    if (query.toLowerCase().includes('tarjeta')) {
+      return responses[0];
+    } else if (query.toLowerCase().includes('prestamo') || query.toLowerCase().includes('préstamo')) {
+      return responses[1];
+    } else if (query.toLowerCase().includes('seguro')) {
+      return responses[2];
+    } else if (query.toLowerCase().includes('ahorro') || query.toLowerCase().includes('cuenta')) {
+      return responses[3];
+    } else if (query.toLowerCase().includes('beneficio') || query.toLowerCase().includes('ventaja')) {
+      return responses[4];
+    } else if (query.toLowerCase().includes('aplazar') || query.toLowerCase().includes('pago')) {
+      return responses[5];
+    } else if (query.toLowerCase().includes('requisito')) {
+      return responses[6];
+    } else if (query.toLowerCase().includes('hogar')) {
+      return responses[7];
+    } else {
+      return "Lo siento, no tengo información específica sobre eso. ¿Puedes reformular tu pregunta o preguntar sobre tarjetas, préstamos, seguros o cuentas de ahorro?";
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (input.trim() === '') return;
     
     // Add user message
     const userMessage: Message = {
-      id: uuidv4(),
+      id: Date.now().toString(),
       content: input,
       sender: 'user',
       timestamp: new Date(),
@@ -100,132 +123,98 @@ export const ProductChatbot = () => {
     setInput('');
     setIsLoading(true);
     
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: input,
-          timestamp: new Date().toISOString(),
-          source: 'chatbot',
-          sessionId: chatSessionId
-        }),
-      });
+    // Try to get response from webhook
+    const webhookResponse = await sendMessageToWebhook(input);
+    
+    setTimeout(() => {
+      let responseText = webhookResponse;
       
-      if (!response.ok) {
-        throw new Error(`Server responded with status: ${response.status}`);
+      // If webhook failed, use the mock response as fallback
+      if (!responseText) {
+        responseText = generateResponse(input);
       }
       
-      const responseData = await response.json();
-      // Extract bot response from any of these common field names
-      const botResponseText = responseData.output || responseData.reply || 
-                            responseData.message || responseData.response || 
-                            'Lo siento, no pude entender tu mensaje.';
-      
       const botMessage: Message = {
-        id: uuidv4(),
-        content: botResponseText,
+        id: (Date.now() + 1).toString(),
+        content: responseText,
         sender: 'bot',
         timestamp: new Date(),
       };
       
       setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Add error message to chat
-      const errorMessage: Message = {
-        id: uuidv4(),
-        content: 'Error de conexión. No se pudo enviar el mensaje.',
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-      
-      toast({
-        title: "Error de conexión",
-        description: "No se pudo conectar con el asistente. Inténtalo de nuevo más tarde.",
-        variant: "destructive"
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }, 1000);
   };
   
   const clearChat = () => {
-    setMessages([welcomeMessage]);
+    setMessages([
+      {
+        id: '1',
+        content: 'Hola, soy tu asistente virtual. ¿En qué puedo ayudarte con información de productos?',
+        sender: 'bot',
+        timestamp: new Date(),
+      },
+    ]);
   };
-
-  // If chat is closed, just show the chat button
-  if (!isOpen) {
-    return (
-      <Button
-        onClick={toggleChat}
-        className="fixed bottom-4 right-4 rounded-full h-14 w-14"
-        size="icon"
-      >
-        <MessageSquare size={24} />
-      </Button>
-    );
-  }
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
+  
+  // Auto scroll to the most recent message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   return (
-    <Card className="glass-card shadow-md fixed bottom-4 right-4 w-[350px] sm:w-[400px] h-[500px] flex flex-col z-50">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Bot className="text-primary" size={20} />
-            Asistente
-            {chatSessionId && (
-              <span className="text-xs text-muted-foreground ml-2">
-                {chatSessionId.substring(0, 6)}...
-              </span>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Pregunta sobre productos y servicios
-          </CardDescription>
-        </div>
-        <Button variant="ghost" size="icon" onClick={toggleChat} className="h-8 w-8 rounded-full">
-          <X size={18} />
-        </Button>
+    <Card className="glass-card shadow-md h-[600px] flex flex-col">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <Bot className="text-primary" size={20} />
+          Asistente de Productos
+          {sessionId && (
+            <span className="text-xs text-muted-foreground ml-2">
+              ID: {sessionId.substring(0, 8)}...
+            </span>
+          )}
+        </CardTitle>
+        <CardDescription>
+          Pregunta sobre características y beneficios
+        </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden px-4">
-        <ScrollArea className="h-full pr-4">
-          <div className="space-y-4">
-            {messages.map((message) => (
+      <CardContent className="flex-1 overflow-y-auto px-4">
+        <div className="space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={message.id}
-                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                  message.sender === 'user'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
               >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    message.sender === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground'
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs opacity-70 mt-1 text-right">
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
+                <p className="text-sm">{message.content}</p>
+                <p className="text-xs opacity-70 mt-1 text-right">
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-            
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-lg px-4 py-2 bg-secondary text-secondary-foreground">
-                  <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
-                </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+          
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-lg px-4 py-2 bg-secondary text-secondary-foreground">
+                <Loader2 className="animate-spin h-5 w-5 text-muted-foreground" />
               </div>
-            )}
-          </div>
-        </ScrollArea>
+            </div>
+          )}
+        </div>
       </CardContent>
       <CardFooter className="border-t pt-4">
         <div className="flex w-full gap-2">
@@ -240,11 +229,11 @@ export const ProductChatbot = () => {
           <Input
             placeholder="Escribe tu pregunta..."
             value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyPress}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="flex-1"
           />
-          <Button onClick={handleSend} disabled={input.trim() === '' || isLoading}>
+          <Button onClick={handleSendMessage} disabled={input.trim() === '' || isLoading}>
             <Send size={16} />
           </Button>
         </div>
