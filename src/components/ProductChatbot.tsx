@@ -11,6 +11,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Bot, Send, RefreshCw, Loader2 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -31,8 +32,45 @@ export const ProductChatbot = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  
+  // N8n webhook URL
+  const webhookUrl = "https://prueba-rd-n8.app.n8n.cloud/webhook-test/flujo-callcenter";
 
-  // Mock response generator
+  // Handle sending messages to n8n webhook
+  const sendMessageToWebhook = async (message: string) => {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message,
+          timestamp: new Date().toISOString(),
+          source: 'chatbot'
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Webhook error:', response.status);
+        return null;
+      }
+      
+      const responseData = await response.json();
+      return responseData.response || null;
+    } catch (error) {
+      console.error('Error sending message to webhook:', error);
+      toast({
+        title: "Error de conexión",
+        description: "No se pudo conectar con el asistente. Inténtalo de nuevo más tarde.",
+        variant: "destructive"
+      });
+      return null;
+    }
+  };
+
+  // Mock response generator as fallback
   const generateResponse = (query: string): string => {
     // This is a mock response generator - in a real app, you would call an AI API
     const responses = [
@@ -68,7 +106,7 @@ export const ProductChatbot = () => {
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (input.trim() === '') return;
     
     // Add user message
@@ -83,11 +121,20 @@ export const ProductChatbot = () => {
     setInput('');
     setIsLoading(true);
     
-    // Simulate API call delay
+    // Try to get response from webhook
+    const webhookResponse = await sendMessageToWebhook(input);
+    
     setTimeout(() => {
+      let responseText = webhookResponse;
+      
+      // If webhook failed, use the mock response as fallback
+      if (!responseText) {
+        responseText = generateResponse(input);
+      }
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: generateResponse(input),
+        content: responseText,
         sender: 'bot',
         timestamp: new Date(),
       };
