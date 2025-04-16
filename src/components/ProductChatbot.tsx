@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Bot, Send, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useSessionId } from "@/hooks/useSessionId";
 
 interface Message {
   id: string;
@@ -33,6 +34,7 @@ export const ProductChatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { sessionId } = useSessionId();
   
   // N8n webhook URL
   const webhookUrl = "https://prueba-rd-n8.app.n8n.cloud/webhook-test/flujo-callcenter";
@@ -48,7 +50,8 @@ export const ProductChatbot = () => {
         body: JSON.stringify({
           message: message,
           timestamp: new Date().toISOString(),
-          source: 'chatbot'
+          source: 'chatbot',
+          sessionId: sessionId
         }),
       });
       
@@ -172,6 +175,11 @@ export const ProductChatbot = () => {
         <CardTitle className="flex items-center gap-2 text-xl">
           <Bot className="text-primary" size={20} />
           Asistente de Productos
+          {sessionId && (
+            <span className="text-xs text-muted-foreground ml-2">
+              ID: {sessionId.substring(0, 8)}...
+            </span>
+          )}
         </CardTitle>
         <CardDescription>
           Pregunta sobre características y beneficios
