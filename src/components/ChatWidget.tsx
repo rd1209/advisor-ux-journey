@@ -44,7 +44,7 @@ export const ChatWidget: React.FC = () => {
     setIsOpen((prev) => {
       const nowOpen = !prev;
       if (nowOpen && messages.length === 0) {
-        setMessages([{ sender: "ai", text: BOT_WELCOME }]);
+        setMessages([{ sender: "ai" as const, text: BOT_WELCOME }]);
       }
       return nowOpen;
     });
