@@ -44,7 +44,7 @@ export const ChatWidget: React.FC = () => {
     setIsOpen((prev) => {
       const nowOpen = !prev;
       if (nowOpen && messages.length === 0) {
-        setMessages([{ sender: "ai" as const, text: BOT_WELCOME }]);
+        setMessages([{ sender: "ai", text: BOT_WELCOME }]);
       }
       return nowOpen;
     });
@@ -55,8 +55,8 @@ export const ChatWidget: React.FC = () => {
     if (!inputValue.trim() || isLoading) return;
 
     // Add user message immediately
-    const nextMessages = [...messages, { sender: "user", text: inputValue }];
-    setMessages(nextMessages);
+    const userMessage: Message = { sender: "user", text: inputValue };
+    setMessages([...messages, userMessage]);
     setInputValue("");
     setIsLoading(true);
     setError(null);
@@ -96,17 +96,15 @@ export const ChatWidget: React.FC = () => {
         throw new Error(`Status: ${response.status}`);
       }
 
-      setMessages((msgs) => [...msgs, { sender: "ai", text: botText }]);
+      const botMessage: Message = { sender: "ai", text: botText };
+      setMessages((msgs) => [...msgs, botMessage]);
     } catch (err) {
       console.error("Webhook/chat error:", err);
-      setMessages((msgs) => [
-        ...msgs,
-        {
-          sender: "ai",
-          text:
-            "Lo siento, hubo un problema al conectar. Intenta de nuevo.",
-        },
-      ]);
+      const errorMessage: Message = {
+        sender: "ai",
+        text: "Lo siento, hubo un problema al conectar. Intenta de nuevo."
+      };
+      setMessages((msgs) => [...msgs, errorMessage]);
       setError("Problema de conexión con el servidor.");
     } finally {
       setIsLoading(false);
@@ -128,7 +126,8 @@ export const ChatWidget: React.FC = () => {
 
   // Helper: Clear chat (add only welcome message)
   const clearChat = () => {
-    setMessages([{ sender: "ai", text: BOT_WELCOME }]);
+    const welcomeMessage: Message = { sender: "ai", text: BOT_WELCOME };
+    setMessages([welcomeMessage]);
     setError(null);
   };
 

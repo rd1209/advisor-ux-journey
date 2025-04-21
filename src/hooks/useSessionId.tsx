@@ -1,7 +1,11 @@
 
 import { useState, useEffect } from 'react';
 
-export const useSessionId = () => {
+/**
+ * Custom hook to manage user session ID
+ * Creates a persistent session ID that's stored in localStorage
+ */
+export function useSessionId() {
   const [sessionId, setSessionId] = useState<string>('');
 
   useEffect(() => {
@@ -27,4 +31,4 @@ export const useSessionId = () => {
   };
 
   return { sessionId, resetSessionId };
-};
+}
